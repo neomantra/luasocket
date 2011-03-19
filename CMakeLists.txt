@@ -1,4 +1,4 @@
-# Copyright (C) 2007-2009 LuaDist.
+# Copyright (C) 2007-2011 LuaDist.
 # Created by Peter Drahoš
 # Redistribution and use of this file is allowed according to the terms of the MIT license.
 # For details see the COPYRIGHT file distributed with LuaDist.
@@ -28,22 +28,21 @@ IF (WIN32 AND NOT CYGWIN)
 	SET(LIB_SOCKET ws2_32)
 ENDIF (WIN32 AND NOT CYGWIN)
 
-# Build modules.
-ADD_LUA_MODULE(socket ${SRC_SOCKET})
-TARGET_LINK_LIBRARIES(socket ${LIB_SOCKET})
-ADD_LUA_MODULE(mime MODULE src/mime.c)
+# Binary
+install_lua_module ( socket.core ${SRC_SOCKET} LINK ${LIB_SOCKET} )
+install_lua_module ( mime.core src/mime.c )
+# Lua 
+install_lua_module ( ltn12 src/ltn12.lua )
+install_lua_module ( mime src/mime.lua )
+install_lua_module ( socket src/socket.lua )
+install_lua_module ( socket.ftp src/ftp.lua )
+install_lua_module ( socket.http src/http.lua )
+install_lua_module ( socket.smtp src/smtp.lua )
+install_lua_module ( socket.tp src/tp.lua )
+install_lua_module ( socket.url src/url.lua )
 
-# Targets were renamed to avoid name clashes. NOTE: Module authors AVOID "core" modules, PLEASE!
-SET_TARGET_PROPERTIES(socket PROPERTIES LIBRARY_OUTPUT_DIRECTORY socket OUTPUT_NAME core)
-SET_TARGET_PROPERTIES(mime   PROPERTIES LIBRARY_OUTPUT_DIRECTORY mime   OUTPUT_NAME core)
-
-# Install all files and documentation
-INSTALL (TARGETS socket DESTINATION ${INSTALL_CMOD}/socket)
-INSTALL (TARGETS mime   DESTINATION ${INSTALL_CMOD}/mime)
-INSTALL (FILES src/ltn12.lua src/mime.lua src/socket.lua DESTINATION ${INSTALL_LMOD})
-INSTALL (FILES src/ftp.lua src/http.lua src/smtp.lua src/tp.lua src/url.lua DESTINATION ${INSTALL_LMOD}/socket)
-INSTALL (DIRECTORY etc/ DESTINATION ${INSTALL_FOO} PATTERN ".git" EXCLUDE)
-INSTALL (DIRECTORY test/ DESTINATION ${INSTALL_TEST} PATTERN ".git" EXCLUDE)
-INSTALL (DIRECTORY samples/ DESTINATION ${INSTALL_EXAMPLE} PATTERN ".git" EXCLUDE)
-INSTALL (DIRECTORY doc/ DESTINATION ${INSTALL_DOC} PATTERN ".git" EXCLUDE)
-INSTALL (FILES README NEW LICENSE DESTINATION ${INSTALL_DATA})
+install_foo ( etc/ )
+install_test ( test/ )
+install_example ( samples/ )
+install_doc ( doc/ )
+install_data ( README NEW LICENSE )
