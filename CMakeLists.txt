@@ -54,3 +54,5 @@ install_data ( README NEW LICENSE )
 
 #2DO: how to spawn testsvr.lua to run in parallel with testclnt.lua?
 #~ add_lua_test ( test/testclnt.lua )
+file ( WRITE t/t.lua " require 'socket' " ) # very basic test
+add_lua_test ( t/t.lua )
