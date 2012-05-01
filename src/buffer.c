@@ -1,8 +1,6 @@
 /*=========================================================================*\
 * Input/Output interface for Lua programs
 * LuaSocket toolkit
-*
-* RCS ID: $Id$
 \*=========================================================================*/
 #include "lua.h"
 #include "lauxlib.h"
@@ -42,7 +40,7 @@ int buffer_open(lua_State *L) {
 * Initializes C structure 
 \*-------------------------------------------------------------------------*/
 void buffer_init(p_buffer buf, p_io io, p_timeout tm) {
-	buf->first = buf->last = 0;
+    buf->first = buf->last = 0;
     buf->io = io;
     buf->tm = tm;
     buf->received = buf->sent = 0;
@@ -80,7 +78,9 @@ int buffer_meth_send(lua_State *L, p_buffer buf) {
     const char *data = luaL_checklstring(L, 2, &size);
     long start = (long) luaL_optnumber(L, 3, 1);
     long end = (long) luaL_optnumber(L, 4, -1);
+#ifdef LUASOCKET_DEBUG
     p_timeout tm = timeout_markstart(buf->tm);
+#endif
     if (start < 0) start = (long) (size+start+1);
     if (end < 0) end = (long) (size+end+1);
     if (start < 1) start = (long) 1;
@@ -111,7 +111,9 @@ int buffer_meth_receive(lua_State *L, p_buffer buf) {
     luaL_Buffer b;
     size_t size;
     const char *part = luaL_optlstring(L, 3, "", &size);
+#ifdef LUASOCKET_DEBUG
     p_timeout tm = timeout_markstart(buf->tm);
+#endif
     /* initialize buffer with optional extra prefix 
      * (useful for concatenating previous partial results) */
     luaL_buffinit(L, &b);
@@ -122,9 +124,15 @@ int buffer_meth_receive(lua_State *L, p_buffer buf) {
         if (p[0] == '*' && p[1] == 'l') err = recvline(buf, &b);
         else if (p[0] == '*' && p[1] == 'a') err = recvall(buf, &b); 
         else luaL_argcheck(L, 0, 2, "invalid receive pattern");
-        /* get a fixed number of bytes (minus what was already partially 
-         * received) */
-    } else err = recvraw(buf, (size_t) lua_tonumber(L, 2)-size, &b);
+    /* get a fixed number of bytes (minus what was already partially 
+     * received) */
+    } else {
+        double n = lua_tonumber(L, 2); 
+        size_t wanted = (size_t) n;
+        luaL_argcheck(L, n >= 0, 2, "invalid receive pattern");
+        if (size == 0 || wanted > size)
+            err = recvraw(buf, wanted-size, &b);
+    }
     /* check if there was an error */
     if (err != IO_DONE) {
         /* we can't push anyting in the stack before pushing the
@@ -166,7 +174,7 @@ static int sendraw(p_buffer buf, const char *data, size_t count, size_t *sent) {
     size_t total = 0;
     int err = IO_DONE;
     while (total < count && err == IO_DONE) {
-        size_t done;
+        size_t done = 0;
         size_t step = (count-total <= STEPSIZE)? count-total: STEPSIZE;
         err = io->send(io->ctx, data+total, step, &done, tm);
         total += done;
@@ -225,7 +233,7 @@ static int recvline(p_buffer buf, luaL_Buffer *b) {
         pos = 0;
         while (pos < count && data[pos] != '\n') {
             /* we ignore all \r's */
-            if (data[pos] != '\r') luaL_putchar(b, data[pos]);
+            if (data[pos] != '\r') luaL_addchar(b, data[pos]);
             pos++;
         }
         if (pos < count) { /* found '\n' */

@@ -2,7 +2,6 @@
 -- TCP sample: Little program to dump lines received at a given port
 -- LuaSocket sample files
 -- Author: Diego Nehab
--- RCS ID: $Id$
 -----------------------------------------------------------------------------
 local socket = require("socket")
 host = host or "*"
