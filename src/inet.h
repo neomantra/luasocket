@@ -13,8 +13,6 @@
 * getpeername and getsockname functions as seen by Lua programs.
 *
 * The Lua functions toip and tohostname are also implemented here.
-*
-* RCS ID: $Id$
 \*=========================================================================*/
 #include "lua.h"
 #include "socket.h"
@@ -26,14 +24,14 @@
 
 int inet_open(lua_State *L);
 
-const char *inet_trycreate(p_socket ps, int type);
-const char *inet_tryconnect(p_socket ps, const char *address, 
-        unsigned short port, p_timeout tm);
-const char *inet_trybind(p_socket ps, const char *address, 
-        unsigned short port);
+const char *inet_trycreate(p_socket ps, int family, int type);
+const char *inet_tryconnect(p_socket ps, const char *address,
+        const char *serv, p_timeout tm, struct addrinfo *connecthints);
+const char *inet_trybind(p_socket ps, const char *address, const char *serv,
+        struct addrinfo *bindhints);
 
-int inet_meth_getpeername(lua_State *L, p_socket ps);
-int inet_meth_getsockname(lua_State *L, p_socket ps);
+int inet_meth_getpeername(lua_State *L, p_socket ps, int family);
+int inet_meth_getsockname(lua_State *L, p_socket ps, int family);
 
 #ifdef INET_ATON
 int inet_aton(const char *cp, struct in_addr *inp);

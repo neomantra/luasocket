@@ -2,7 +2,6 @@
 -- TCP sample: Little program to send text lines to a given host/port
 -- LuaSocket sample files
 -- Author: Diego Nehab
--- RCS ID: $Id$
 -----------------------------------------------------------------------------
 local socket = require("socket")
 host = host or "localhost"

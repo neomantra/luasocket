@@ -2,7 +2,6 @@
 -- FTP support for the Lua language
 -- LuaSocket toolkit.
 -- Author: Diego Nehab
--- RCS ID: $Id$
 -----------------------------------------------------------------------------
 
 -----------------------------------------------------------------------------
@@ -212,8 +211,8 @@ local function tput(putt)
 end
 
 local default = {
-	path = "/",
-	scheme = "ftp"
+    path = "/",
+    scheme = "ftp"
 }
 
 local function parse(u)
