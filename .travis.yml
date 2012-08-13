@@ -1,50 +1,67 @@
+#!/bin/sh -ex
+# Utility functions for use with Travis CI (travis-ci.org).
 #
-# LuaDist Travis-CI Hook
-#
+# Copyright (C) 2012 LuaDist.
+# Created by David Manura.
+# Redistribution and use of this file is allowed according to the terms of the MIT license.
+# For details see the COPYRIGHT file distributed with LuaDist.
+# Please note that the package source code is licensed under its own license.
 
-# Since CMake is not directly supported we use erlang VMs
-language: erlang
+# recommend TOOL/COMPILER environment variable combinations for standard rules:
+#- TOOL=""                     # Use native compiler (GCC usually)
+#- COMPILER="clang"            # Use clang
+#- TOOL="i686-w64-mingw32"     # 32bit MinGW
+#- TOOL="x86_64-w64-mingw32"   # 64bit MinGW
+#- TOOL="arm-linux-gnueabihf"  # ARM hard-float (hf), linux
+#- TOOL="i586-mingw32msvc"     # old 32bit MinGW
 
-# Try using multiple Lua Implementations
-env:
-  - LUA=""             # Use automatic dependencies
-  - LUA="luajit"       # Try with LuaJIT
-# - CMAKE="-DCMAKE_VARIABLE=value"
-# - LUA="lua-5.1.5"
+uname -a   # details about system being built on.
 
-# Allow luajit to fail
-matrix:
-  allow_failures:
-    - env: LUA="luajit"
+[ $TOOL ] && export TOOLFILE="$HOME/$TOOL.cmake"
 
-# We need CMake and LuaDist
-install:
-  - export MODULE=`basename $PWD`
-  - sudo apt-get install cmake >/dev/null 2>&1
-  - git clone git://github.com/LuaDist/bootstrap.git _luadist >/dev/null 2>&1
-  - cd _luadist
-  - git submodule update --init >/dev/null 2>&1
-  - ./bootstrap >/dev/null 2>&1
-  - export LUADIST=$PWD/_install/bin/luadist
-  - cd $HOME
-
-# Use LuaDist to deploy the module
-script:
-  - $LUADIST _test install $LUA $MODULE-scm $CMAKE -verbose=true -test=true
-
-# Execute additional tests or commands
-#after_script:
-#  - [run additional test commans]
-
-# Only watch the master branch
-branches:
-  only:
-    - master
-
-# Notify the LuaDist Dev group if needed
-notifications:
-  recipients:
-    - luadist-dev@googlegroups.com
-  email:
-    on_success: change
-    on_failure: always
+case "$1" in
+  "install")
+    which cmake || sudo apt-get -qq install cmake
+    case "$TOOL|$COMPILER" in
+      "i586-mingw32msvc|") which $TOOL-gcc || sudo apt-get -qq install gcc-mingw32 ;;
+      "x86_64-w64-mingw32|" | "i686-w64-mingw32|") which $TOOL-gcc || sudo apt-get -qq install gcc-mingw-w64 ;;
+      "arm-linux-gnueabihf|") which $TOOL-gcc || sudo apt-get -qq install gcc-arm-linux-gnueabihf ;;
+      "|clang") which clang || sudo apt-get -qq install clang ;;
+      "|" ) ;;
+      * ) echo "ASSERT: $TOOL|$COMPILER"; exit 1 ;;
+    esac
+    if [ $TOOL ]; then
+      echo '' > $TOOLFILE
+      echo "set(toolchain $TOOL)" >> $TOOLFILE
+      echo "if(toolchain)" >> $TOOLFILE
+      echo '  set(toolchain_ ${toolchain}-)' >> $TOOLFILE
+      echo "endif()" >> $TOOLFILE
+      case "$TOOL" in
+        *linux*) echo "set(CMAKE_SYSTEM_NAME Linux)"   >> $TOOLFILE ;;
+        *mingw*) echo "set(CMAKE_SYSTEM_NAME Windows)" >> $TOOLFILE ;;
+      esac
+      echo 'set(CMAKE_C_COMPILER ${toolchain_}gcc)' >> $TOOLFILE
+      echo 'set(CMAKE_CXX_COMPILER ${toolchain_}g++)' >> $TOOLFILE
+      echo 'set(CMAKE_RC_COMPILER ${toolchain_}windres )' >> $TOOLFILE
+      echo 'set(CMAKE_RC_OUTPUT_EXTENSION .obj)' >> $TOOLFILE
+      echo 'set(CMAKE_RC_COMPILE_OBJECT "<CMAKE_RC_COMPILER> -O coff <FLAGS> <DEFINES> <SOURCE> <OBJECT>")' >> $TOOLFILE
+      echo 'set(CMAKE_FIND_ROOT_PATH /usr/${_toolchain}/ ${CMAKE_INSTALL_PREFIX})' >> $TOOLFILE
+      echo 'set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)' >> $TOOLFILE
+      echo 'set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)' >> $TOOLFILE
+    fi
+  ;;
+  "bootstrap")
+    git clone --recursive git://github.com/LuaDist/bootstrap.git _luadist >/dev/null 2>&1
+    (cd _luadist && ./bootstrap >/dev/null 2>&1)
+    ln -s "$PWD/_luadist/_install/bin/luadist" ~/luadist
+  ;;
+  "build")
+	[ $COMPILER ] && export CC=$COMPILER
+    export MODULE=`basename $PWD`
+    ~/luadist _test install $MODULE-scm -verbose -DCMAKE_TOOLCHAIN_FILE=$TOOLFILE
+  ;;
+  *)
+    echo "travis: missing argument $1"
+    exit 1
+  ;;
+esac
